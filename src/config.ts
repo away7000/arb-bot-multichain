@@ -10,5 +10,4 @@ export const CONFIG = {
     token: process.env.TELEGRAM_TOKEN!,
     chatId: process.env.TELEGRAM_CHAT_ID!,
   },
-  PRIVATE_KEY: process.env.PRIVATE_KEY!,
 };
