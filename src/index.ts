@@ -1,46 +1,47 @@
-import { getQuote } from "./fetcher/oneinch";
-import { findArbitrage } from "./engine/arbitrage";
+import { PAIRS } from "./pairs";
+import { TOKENS } from "./tokens";
+import { getDexPrice } from "./fetcher/1inch";
+import { getCexPrice } from "./fetcher/binance";
 import { sendTelegram } from "./notifier/telegram";
+import { calculateArb } from "./engine/arb";
 
-const TOKENS = {
-  USDT: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  USDC: "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-};
+console.log("BOT STARTED 🚀");
 
 async function scan() {
-  try {
-    const quotes: any[] = [];
+  console.log("Scanning...");
 
-    const eth = await getQuote(1, TOKENS.USDT, TOKENS.USDC, "100000000");
-    const bsc = await getQuote(56, TOKENS.USDT, TOKENS.USDC, "100000000");
+  for (const pair of PAIRS) {
+    try {
+      const symbol = pair.base + pair.quote;
 
-    quotes.push({
-      chain: "eth",
-      from: TOKENS.USDT,
-      to: TOKENS.USDC,
-      in: eth.fromTokenAmount,
-      out: eth.toTokenAmount,
-    });
+      const cexPrice = await getCexPrice(symbol);
+      if (!cexPrice) continue;
 
-    quotes.push({
-      chain: "bsc",
-      from: TOKENS.USDT,
-      to: TOKENS.USDC,
-      in: bsc.fromTokenAmount,
-      out: bsc.toTokenAmount,
-    });
+      const dex = await getDexPrice(
+        1,
+        TOKENS[pair.base],
+        TOKENS[pair.quote],
+        "1000000000000000000"
+      );
 
-    const opps = findArbitrage(quotes);
+      const dexPrice = Number(dex.toTokenAmount) / Number(dex.fromTokenAmount);
 
-    if (opps.length > 0) {
-      const best = opps[0];
-      const msg = `🚨 ARB\n${best.a.chain} → ${best.b.chain}\nProfit: ${best.profit}`;
-      console.log(msg);
-      await sendTelegram(msg);
+      const arb = calculateArb(dexPrice, cexPrice);
+
+      console.log(pair.base, pair.quote, "DEX:", dexPrice, "CEX:", cexPrice);
+
+      if (Math.abs(arb.percent) > 0.5) {
+        const msg = `🚨 ARB\n${pair.base}/${pair.quote}\nDEX: ${dexPrice}\nCEX: ${cexPrice}\nDiff: ${arb.percent.toFixed(2)}%`;
+
+        console.log(msg);
+        await sendTelegram(msg);
+      }
+
+    } catch (err) {
+      console.error("ERROR PAIR:", pair, err);
     }
-  } catch (err) {
-    console.error(err);
   }
 }
 
-setInterval(scan, 5000);
+scan();
+setInterval(scan, 8000);
