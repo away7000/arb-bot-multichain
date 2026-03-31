@@ -4,6 +4,7 @@ import { getDexPrice } from "./fetcher/1inch";
 import { getAllPrices } from "./fetcher/cex";
 import { findBest } from "./engine/arb";
 import { sendTelegram } from "./notifier/telegram";
+import { getTopCoins } from "./fetcher/globalPairs";
 
 console.log("BOT STARTED 🚀");
 
