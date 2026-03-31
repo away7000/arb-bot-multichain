@@ -5,6 +5,22 @@ import { getCexPrice } from "./fetcher/binance";
 import { sendTelegram } from "./notifier/telegram";
 import { calculateArb } from "./engine/arb";
 
+const best = findBest(cexPrices, dexPrice);
+
+if (!best) return;
+
+if (Math.abs(best.percent) > 0.5) {
+  const msg = `
+🚨 GLOBAL ARB
+${pair.base}/${pair.quote}
+DEX: ${dexPrice}
+${best.ex.toUpperCase()}: ${best.price}
+Spread: ${best.percent.toFixed(2)}%
+`;
+
+  await sendTelegram(msg);
+}
+
 console.log("BOT STARTED 🚀");
 
 async function scan() {
