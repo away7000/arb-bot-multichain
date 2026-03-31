@@ -3,6 +3,7 @@ import { TOKENS } from "./tokens";
 import { getDexPrice } from "./fetcher/1inch";
 import { getAllPrices } from "./fetcher/cex";
 import { findBest } from "./engine/arb";
+import { sendTelegram } from "./notifier/telegram";
 
 console.log("BOT STARTED 🚀");
 
@@ -14,7 +15,6 @@ async function scan() {
       const symbol = pair.base + pair.quote;
 
       const cexPrices = await getAllPrices(symbol);
-      console.log("CEX:", cexPrices);
 
       const dex = await getDexPrice(
         1,
@@ -27,10 +27,21 @@ async function scan() {
         Number(dex.toTokenAmount) /
         Number(dex.fromTokenAmount);
 
-      console.log("DEX:", dexPrice);
-
       const best = findBest(cexPrices, dexPrice);
-      console.log("BEST:", best);
+
+      // 👉 NAH DISINI TARO
+      if (best && Math.abs(best.percent) > 0.5) {
+        const msg = `
+🚨 GLOBAL ARB
+${pair.base}/${pair.quote}
+DEX: ${dexPrice}
+${best.ex.toUpperCase()}: ${best.price}
+Spread: ${best.percent.toFixed(2)}%
+`;
+
+        console.log(msg);
+        await sendTelegram(msg);
+      }
 
     } catch (err) {
       console.error("ERROR:", pair, err);
